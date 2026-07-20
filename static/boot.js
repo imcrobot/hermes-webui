@@ -3194,6 +3194,51 @@ window._mirrorSpeechSettingsFromServer=_mirrorSpeechSettingsFromServer;
   if(profileLabel) profileLabel.textContent=S.activeProfile||'default';
   const titleLabel=$('titlebarProfileLabel');
   if(titleLabel) titleLabel.textContent=S.activeProfile||'default';
+  // Fetch the user's plan from the provisioner's portal API. Same-origin
+  // fetch — the browser's _oauth2_proxy cookie is forwarded by openresty
+  // to the auth_request subrequest, which injects X-Auth-Request-Email
+  // into the upstream call. A 200 response yields the plan; a 302 to
+  // /oauth2/start (or any other failure) is treated as "not signed in"
+  // and the badge is shown. NEVER trust any other client-side signal
+  // for plan gating: the badge is marketing, but the plan is server-side.
+  (function _resolveProBadgeVisibility(){
+    const badge = $('proBadge');
+    if(!badge) return;
+    const show = () => { badge.style.display = 'inline-flex'; };
+    const hide = () => { badge.style.display = 'none'; };
+    let aborted = false;
+    const timer = setTimeout(() => { aborted = true; show(); }, 4000);
+    // Use redirect:'manual' so a 302 to /oauth2/start is surfaced as
+    // response.type === 'opaqueredirect' instead of bouncing through
+    // the OAuth flow (which would clobber the WebUI's location).
+    // Use the absolute /api/portal/me so the request is always routed
+    // to the openresty-managed provisioner, never to a webui local
+    // route (the webui has no /api/portal/* endpoint and would 404
+    // or — worse — fall through to the static-file handler and return
+    // index.html, which JSON.parse would then reject on the
+    // "Unexpected token <" SyntaxError).
+    fetch('/api/portal/me', {credentials: 'include', redirect: 'manual'})
+      .then(r => {
+        clearTimeout(timer);
+        if(aborted) return;
+        if(r.type === 'opaqueredirect' || r.status === 401 || r.status === 302) {
+          show(); return;
+        }
+        if(!r.ok) { show(); return; }
+        return r.json().then(j => {
+          // The provisioner returns subscription: null when the user has
+          // never subscribed. used_plans may contain 'free' (one-shot
+          // onboarding) but that is a one-time event and should NOT
+          // hide the upgrade prompt — only an ACTIVE pro subscription
+          // should. The 'group' field falls back to NEW_API_DEFAULT_GROUP
+          // for non-subscribers, which is "default" on this deployment.
+          const plan = (j && j.subscription && j.subscription.plan) || null;
+          const group = (j && j.group) || null;
+          if(plan === 'pro' || group === 'pro') hide(); else show();
+        }).catch(() => show());
+      })
+      .catch(() => { clearTimeout(timer); if(!aborted) show(); });
+  })();
   // Fetch available models without blocking session restore. The static HTML
   // options are enough for first paint; the dynamic provider list can settle
   // after the saved session is visible.

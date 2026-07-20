@@ -2709,6 +2709,15 @@
   .send-btn:active{transform:scale(0.95);box-shadow:0 1px 4px var(--accent-bg);}
   .send-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none;}
   .send-btn.visible{animation:send-pop-in .18s cubic-bezier(.34,1.56,.64,1) forwards;}
+  /* PRO upgrade badge: sits in .composer-right between bg-badge and send-btn.
+     Hidden by default; flipped to display:inline-flex by boot.js once
+     /api/portal/me resolves and the user's plan is not 'pro'. The anchor
+     is display:none by default in the HTML so the badge never flashes for
+     pro users before boot.js has a chance to run. */
+  .pro-badge-wrap{display:inline-flex;align-items:center;justify-content:center;height:26px;padding:0 2px;border-radius:6px;cursor:pointer;flex-shrink:0;transition:transform .15s,opacity .15s;text-decoration:none;line-height:0;}
+  .pro-badge-wrap:hover{transform:scale(1.04);}
+  .pro-badge-wrap:active{transform:scale(0.97);}
+  .pro-badge-img{height:26px;width:auto;display:block;user-select:none;-webkit-user-drag:none;pointer-events:none;}
   button,.icon-btn,.panel-icon-btn,.send-btn,.approval-btn,[onclick]{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
   .composer-terminal-panel{position:absolute;left:0;right:0;bottom:-24px;width:min(calc(100% - 64px),720px);margin:0 auto;box-sizing:border-box;overflow:hidden;pointer-events:none;z-index:1;}
   .composer-terminal-panel.is-open,.composer-terminal-panel.is-collapsed{pointer-events:auto;}
